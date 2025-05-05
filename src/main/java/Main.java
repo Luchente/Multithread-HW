@@ -40,19 +40,26 @@ public class Main {
             futures.add(executorService.submit(task));
         }
 
-        int globalMax = 0;
+        // Собираем результаты
+        int maxGlobalSize = 0;
         for (Future<Integer> future : futures) {
-            int localMax = future.get();
-            if (localMax > globalMax) {
-                globalMax = localMax;
+            try {
+                int result = future.get();
+                if (result > maxGlobalSize) {
+                    maxGlobalSize = result;
+                }
+            } catch (InterruptedException | ExecutionException e) {
+                e.printStackTrace();
             }
         }
 
-        executorService.shutdown();
+        long endTs = System.currentTimeMillis();// end time
 
-        long endTs = System.currentTimeMillis(); // end time
-        System.out.println("Max interval of 'a': " + globalMax + " symbols");
+        System.out.println("Max interval size across all strings: " + maxGlobalSize);
         System.out.println("Time: " + (endTs - startTs) + "ms");
+
+        // Завершаем работу пула потоков
+        executorService.shutdown();
     }
 
     public static String generateText(String letters, int length) {
