@@ -1,20 +1,22 @@
 package main.java;
 
 import java.util.*;
+import java.util.concurrent.*;
 
 public class Main {
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) throws InterruptedException, ExecutionException {
         String[] texts = new String[25];
         for (int i = 0; i < texts.length; i++) {
             texts[i] = generateText("aab", 30_000);
         }
 
-        List<Thread> threads = new ArrayList<>();
+        ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+        List<Future<Integer>> futures = new ArrayList<>();
 
         long startTs = System.currentTimeMillis(); // start time
         for (String text : texts) {
-            Thread thread = new Thread(() -> {
+            Callable<Integer> task = () -> {
                 int maxSize = 0;
                 for (int i = 0; i < text.length(); i++) {
                     for (int j = 0; j < text.length(); j++) {
@@ -33,24 +35,27 @@ public class Main {
                         }
                     }
                 }
-                System.out.println(text.substring(0, 100) + " -> " + maxSize);
-            });
-
-            threads.add(thread);
-            thread.start();
+                return maxSize;
+            };
+            futures.add(executorService.submit(task));
         }
 
-        for (Thread thread : threads) {
-            thread.join();
+        int globalMax = 0;
+        for (Future<Integer> future : futures) {
+            int localMax = future.get();
+            if (localMax > globalMax) {
+                globalMax = localMax;
+            }
         }
+
+        executorService.shutdown();
 
         long endTs = System.currentTimeMillis(); // end time
-
+        System.out.println("Max interval of 'a': " + globalMax + " symbols");
         System.out.println("Time: " + (endTs - startTs) + "ms");
-
     }
 
-    public static String generateText (String letters,int length){
+    public static String generateText(String letters, int length) {
         Random random = new Random();
         StringBuilder text = new StringBuilder();
         for (int i = 0; i < length; i++) {
